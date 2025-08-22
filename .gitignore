@@ -1,0 +1,22 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+lora_model/
+outputs/
+model/
+*.gguf
+*.gguf2
+*.gguf2.index
+*.gguf2.index.json
+*.gguf2.index.json.gz
+*.gguf2.index.json.gz.part
+*.gguf2.index.json.gz.part.1
+*.gguf2.index.json.gz.part.2
