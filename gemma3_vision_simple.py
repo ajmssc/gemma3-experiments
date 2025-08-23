@@ -55,33 +55,28 @@ Please provide a description that is engaging, highlights key features, and incl
 
 def convert_to_vision_format(example):
     """Convert dataset examples to vision format with messages"""
-    messages = [
-        {"role": "system", "content": [{"type": "text", "text": system_message}]},
-        {"role": "user", "content": [
-            {"type": "image", "image": example["image"]},
-            {"type": "text", "text": user_prompt.format(
-                product=example["product_name"], 
-                category=example["category"]
-            )}
-        ]},
-        {"role": "assistant", "content": example["description"]}
-    ]
-    return {"messages": messages}
+    # Store image separately to avoid Arrow serialization issues
+    return {
+        "image": example["image"],
+        "product_name": example["Product Name"],
+        "category": example["Category"],
+        "description": example["description"],
+        "system_message": system_message,
+        "user_prompt": user_prompt.format(
+            product=example["Product Name"], 
+            category=example["Category"]
+        )
+    }
 
 # Convert dataset to vision format
 dataset = dataset.map(convert_to_vision_format)
 
 def formatting_prompts_func(examples):
     """Format examples for training"""
-    convos = examples["messages"]
     texts = []
-    for convo in convos:
-        # Apply chat template and remove BOS token
-        text = processor.apply_chat_template(
-            convo, 
-            tokenize=False, 
-            add_generation_prompt=False
-        ).removeprefix('<bos>')
+    for i in range(len(examples["image"])):
+        # Create simple text format for vision-text training
+        text = f"<image>\n{examples['user_prompt'][i]}\n{examples['description'][i]}"
         texts.append(text)
     return {"text": texts}
 
@@ -91,18 +86,7 @@ dataset = dataset.map(formatting_prompts_func, batched=True)
 def collate_fn(batch):
     """Custom collate function for vision-text data"""
     texts = [item["text"] for item in batch]
-    
-    # Extract images from messages
-    images = []
-    for item in batch:
-        # Find the image in the user message
-        for msg in item["messages"]:
-            if msg["role"] == "user":
-                for content in msg["content"]:
-                    if content["type"] == "image":
-                        images.append(content["image"])
-                        break
-                break
+    images = [item["image"] for item in batch]
     
     # Process images using the processor
     image_inputs = processor.image_processor(images, return_tensors="pt")
@@ -142,7 +126,7 @@ trainer = SFTTrainer(
         gradient_accumulation_steps=4,
         warmup_steps=5,
         max_steps=100,
-        learning_rate=5e-5,
+        learning_rate=5e-6,
         logging_steps=1,
         optim="adamw_8bit",
         weight_decay=0.01,
@@ -159,7 +143,7 @@ print("Starting vision fine-tuning...")
 trainer.train()
 
 # Save the model
-trainer.save_model()
+trainer.save_model("outputs_vision")
 
 # Free memory
 del model
