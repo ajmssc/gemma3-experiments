@@ -125,4 +125,25 @@ def main():
     torch.cuda.empty_cache()
 
 if __name__ == "__main__":
-    main()
+    # main()
+    model, tokenizer, processor = load_trained_model("./gemma3-finetuned/outputs_vision")
+    
+    # Load image
+    image = load_image("https://m.media-amazon.com/images/I/81+7Up7IWyL._AC_SY300_SX300_.jpg")
+    
+    print(f"\nGenerating description for:")
+    print(f"Product: Toy Doll")
+    print(f"Category: Toys")
+    print("-" * 50)
+    
+    # Generate description
+    description = generate_description(
+        model, tokenizer, processor, image, 
+        "Toy Doll", "Toys"
+    )
+    
+    print(f"Generated Description:\n{description}")
+    
+    # Clean up
+    del model
+    torch.cuda.empty_cache()
